@@ -1,1 +1,122 @@
 2025-08-13 20:15:11,616 - INFO - Streamlit app started.
+2025-08-13 20:15:11,620 - INFO - Loading CSV data...
+2025-08-13 20:15:11,626 - INFO - Data loaded successfully. Shape: (2000, 4)
+2025-08-13 20:15:11,627 - INFO - Calculating current DB usage summary...
+2025-08-13 20:15:11,632 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 20:15:11,634 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 20:15:11,636 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 20:15:11,638 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 20:15:11,641 - INFO - Loading ARIMA models from pickle...
+2025-08-13 20:15:11,682 - INFO - Loaded 15 models.
+2025-08-13 20:16:42,804 - INFO - Streamlit app started.
+2025-08-13 20:16:42,806 - INFO - Calculating current DB usage summary...
+2025-08-13 20:16:42,811 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 20:16:42,814 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 20:16:42,815 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 20:16:42,818 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:01:34,467 - INFO - Streamlit app started.
+2025-08-13 22:01:35,189 - INFO - Loading CSV data...
+2025-08-13 22:01:35,202 - INFO - Data loaded successfully. Shape: (2000, 4)
+2025-08-13 22:01:35,204 - INFO - Calculating current DB usage summary...
+2025-08-13 22:01:35,211 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:01:35,212 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:01:35,214 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:01:35,215 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:01:35,222 - INFO - Loading ARIMA models from pickle...
+2025-08-13 22:01:35,270 - INFO - Loaded 15 models.
+2025-08-13 22:10:56,099 - INFO - Streamlit app started.
+2025-08-13 22:10:56,596 - INFO - Loading CSV data...
+2025-08-13 22:10:56,606 - INFO - Data loaded successfully. Shape: (2000, 4)
+2025-08-13 22:10:56,607 - INFO - Calculating current DB usage summary...
+2025-08-13 22:10:56,613 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:10:56,614 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:10:56,616 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:10:56,618 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:10:56,621 - INFO - Loading ARIMA models from pickle...
+2025-08-13 22:10:56,662 - INFO - Loaded 15 models.
+2025-08-13 22:11:01,918 - INFO - Streamlit app started.
+2025-08-13 22:11:01,921 - INFO - Calculating current DB usage summary...
+2025-08-13 22:11:01,929 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:11:01,938 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:11:01,944 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:11:01,947 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:11:01,954 - INFO - Generate Forecast button clicked.
+2025-08-13 22:11:01,961 - INFO - Preparing forecast for Server: All Servers, Database: All Databases
+2025-08-13 22:11:01,962 - INFO - Forecasting for key: ('All Servers', 'All Databases') ...
+2025-08-13 22:11:01,963 - INFO - Fitting new ARIMA model.
+2025-08-13 22:11:02,032 - INFO - Forecast completed. Forecast length: 6
+2025-08-13 22:11:02,033 - INFO - Plotting forecast...
+2025-08-13 22:11:02,342 - INFO - Plotting completed.
+2025-08-13 22:11:02,352 - INFO - Forecast table displayed.
+2025-08-13 22:11:08,953 - INFO - Streamlit app started.
+2025-08-13 22:11:08,955 - INFO - Calculating current DB usage summary...
+2025-08-13 22:11:08,962 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:11:08,963 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:11:08,966 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:11:08,969 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:11:10,675 - INFO - Streamlit app started.
+2025-08-13 22:11:10,677 - INFO - Calculating current DB usage summary...
+2025-08-13 22:11:10,683 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:11:10,684 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:11:10,686 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:11:10,689 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:11:10,699 - INFO - Generate Forecast button clicked.
+2025-08-13 22:11:10,704 - INFO - Preparing forecast for Server: Server_B, Database: All Databases
+2025-08-13 22:11:10,705 - INFO - Forecasting for key: ('Server_B', 'All Databases') ...
+2025-08-13 22:11:10,707 - INFO - Fitting new ARIMA model.
+2025-08-13 22:11:10,770 - INFO - Forecast completed. Forecast length: 6
+2025-08-13 22:11:10,771 - INFO - Plotting forecast...
+2025-08-13 22:11:11,086 - INFO - Plotting completed.
+2025-08-13 22:11:11,091 - INFO - Forecast table displayed.
+2025-08-13 22:14:50,018 - INFO - Streamlit app started.
+2025-08-13 22:14:50,022 - INFO - Calculating current DB usage summary...
+2025-08-13 22:14:50,030 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:14:50,032 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:14:50,034 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:14:50,036 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:14:50,224 - INFO - Streamlit app started.
+2025-08-13 22:14:50,227 - INFO - Calculating current DB usage summary...
+2025-08-13 22:14:50,234 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:14:50,235 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:14:50,236 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:14:50,238 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:14:50,400 - INFO - Streamlit app started.
+2025-08-13 22:14:50,402 - INFO - Calculating current DB usage summary...
+2025-08-13 22:14:50,408 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:14:50,410 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:14:50,412 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:14:50,413 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:14:52,125 - INFO - Streamlit app started.
+2025-08-13 22:14:52,128 - INFO - Calculating current DB usage summary...
+2025-08-13 22:14:52,135 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:14:52,136 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:14:52,138 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:14:52,143 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:14:52,150 - INFO - Generate Forecast button clicked.
+2025-08-13 22:14:52,154 - INFO - Preparing forecast for Server: Server_B, Database: All Databases
+2025-08-13 22:14:52,155 - INFO - Forecasting for key: ('Server_B', 'All Databases') ...
+2025-08-13 22:14:52,155 - INFO - Fitting new ARIMA model.
+2025-08-13 22:14:52,216 - INFO - Forecast completed. Forecast length: 9
+2025-08-13 22:14:52,218 - INFO - Plotting forecast...
+2025-08-13 22:14:52,509 - INFO - Plotting completed.
+2025-08-13 22:14:52,513 - INFO - Forecast table displayed.
+2025-08-13 22:15:06,935 - INFO - Streamlit app started.
+2025-08-13 22:15:06,938 - INFO - Calculating current DB usage summary...
+2025-08-13 22:15:06,945 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:15:06,947 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:15:06,948 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:15:06,950 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:15:08,692 - INFO - Streamlit app started.
+2025-08-13 22:15:08,694 - INFO - Calculating current DB usage summary...
+2025-08-13 22:15:08,701 - INFO - Overall total DB size: 87.50 GB
+2025-08-13 22:15:08,703 - INFO - Server: Server_A (as of 2025-07-28) — Total DB Size: 34.37 GB
+2025-08-13 22:15:08,704 - INFO - Server: Server_B (as of 2025-07-20) — Total DB Size: 19.31 GB
+2025-08-13 22:15:08,708 - INFO - Server: Server_C (as of 2025-07-31) — Total DB Size: 33.82 GB
+2025-08-13 22:15:08,719 - INFO - Generate Forecast button clicked.
+2025-08-13 22:15:08,724 - INFO - Preparing forecast for Server: Server_B, Database: DB_HR
+2025-08-13 22:15:08,726 - INFO - Forecasting for key: ('Server_B', 'DB_HR') ...
+2025-08-13 22:15:08,726 - INFO - Using pre-trained ARIMA model.
+2025-08-13 22:15:08,731 - INFO - Forecast completed. Forecast length: 9
+2025-08-13 22:15:08,733 - INFO - Plotting forecast...
+2025-08-13 22:15:09,014 - INFO - Plotting completed.
+2025-08-13 22:15:09,018 - INFO - Forecast table displayed.
