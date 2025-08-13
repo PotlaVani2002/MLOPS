@@ -1,163 +1,109 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import matplotlib.pyplot as plt
 from datetime import timedelta
 from statsmodels.tsa.arima.model import ARIMA
 import logging
 
-# -------------------------------
-# Logging setup
-# -------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("app_logs.log"), logging.StreamHandler()]
-)
-logging.info("Streamlit app started.")
+# Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 
-# -------------------------------
-# Load data
-# -------------------------------
+# Load Data
 @st.cache_data
 def load_data():
-    logging.info("Loading CSV data...")
     try:
         df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
-        logging.info(f"Data loaded successfully. Shape: {df.shape}")
         return df
     except FileNotFoundError:
-        logging.error("CSV file not found!")
-        st.error("CSV file not found! Make sure db_growth_data.csv is in the app folder.")
-        st.stop()  # Stop execution if file is missing
+        st.error("CSV file not found. Ensure 'db_growth_data.csv' is present.")
+        st.stop()
 
 df = load_data()
 
-# -------------------------------
-# Current DB Usage Summary
-# -------------------------------
-logging.info("Calculating current DB usage summary...")
+# Summary Section
 st.title("📊 Current Database Usage Summary")
 
-latest_dates = df.groupby('Server')['Date'].max().reset_index()
-latest_per_server = pd.merge(df, latest_dates, on=['Server', 'Date'], how='inner')
-total_usage_per_server = latest_per_server.groupby('Server')['DB_Size_GB'].sum().reset_index()
-overall_total = total_usage_per_server['DB_Size_GB'].sum()
+latest = df.groupby('Server')['Date'].max().reset_index()
+latest_data = pd.merge(df, latest, on=['Server', 'Date'], how='inner')
+server_sizes = latest_data.groupby('Server')['DB_Size_GB'].sum().reset_index()
+total_size = server_sizes['DB_Size_GB'].sum()
 
-logging.info(f"Overall total DB size: {overall_total:.2f} GB")
+for _, row in server_sizes.iterrows():
+    st.write(f"Server: **{row['Server']}** — Total DB Size: **{row['DB_Size_GB']:.2f} GB**")
+st.write(f"### Total Across All Servers: **{total_size:.2f} GB**")
+st.markdown("---")
 
-for _, row in total_usage_per_server.iterrows():
-    server_date = latest_dates[latest_dates['Server'] == row['Server']]['Date'].values[0]
-    log_msg = f"Server: {row['Server']} (as of {pd.to_datetime(server_date).date()}) — Total DB Size: {row['DB_Size_GB']:.2f} GB"
-    logging.info(log_msg)
-    st.write(f"Server: **{row['Server']}** (as of {pd.to_datetime(server_date).date()}) — Total DB Size: **{row['DB_Size_GB']:.2f} GB**")
-
-st.write("---")
-st.write(f"### Overall Total DB Size Across All Servers: **{overall_total:.2f} GB**")
-
-# -------------------------------
-# Load ARIMA models
-# -------------------------------
-@st.cache_resource
-def load_models():
-    logging.info("Loading ARIMA models from pickle...")
-    try:
-        with open("arima_models.pkl", "rb") as f:
-            models = pickle.load(f)
-        logging.info(f"Loaded {len(models)} models.")
-    except FileNotFoundError:
-        logging.warning("ARIMA models pickle file not found! Will fit new models on the fly.")
-        models = {}
-    return models
-
-models = load_models()
-
-# -------------------------------
-# Forecasting Section
-# -------------------------------
-st.title("📈 Database Size Growth Forecasting")
-
-months_to_forecast = st.number_input("Months to Forecast", min_value=1, max_value=48, value=6)
+# Inputs
+st.title("📈 Forecast DB Growth with ARIMA")
+months_to_forecast = st.slider("Months to Forecast", min_value=1, max_value=36, value=12)
 chart_type = st.selectbox("Chart Type", ["Line Chart", "Bar Chart"])
 
-server_options = ["All Servers"] + sorted(df["Server"].unique().tolist())
-selected_server = st.selectbox("Select Server", server_options)
+server_list = ["All Servers"] + sorted(df["Server"].unique())
+selected_server = st.selectbox("Select Server", server_list)
 
 if selected_server != "All Servers":
-    db_options = ["All Databases"] + sorted(df[df["Server"] == selected_server]["Database"].unique().tolist())
+    db_list = ["All Databases"] + sorted(df[df["Server"] == selected_server]["Database"].unique())
 else:
-    db_options = ["All Databases"]
-selected_database = st.selectbox("Select Database", db_options)
+    db_list = ["All Databases"]
+selected_database = st.selectbox("Select Database", db_list)
 
-# -------------------------------
-# Forecast function
-# -------------------------------
-def forecast_series(ts, model_key):
-    logging.info(f"Forecasting for key: {model_key} ...")
-    if model_key in models:
-        logging.info("Using pre-trained ARIMA model.")
-        model_fit = models[model_key]
-    else:
-        logging.info("Fitting new ARIMA model.")
-        model_fit = ARIMA(ts, order=(1, 1, 1)).fit()
-    forecast = model_fit.forecast(steps=months_to_forecast)
-    forecast_dates = pd.date_range(ts.index[-1] + timedelta(days=1), periods=months_to_forecast, freq="MS")
-    logging.info(f"Forecast completed. Forecast length: {len(forecast)}")
-    return pd.DataFrame({"Date": forecast_dates, "Predicted_Size_GB": forecast.values})
+capacity_limit = st.slider("⚠️ Capacity Limit (GB)", min_value=10, max_value=1000, value=500)
 
-# -------------------------------
-# Prepare data for plotting
-# -------------------------------
-plot_data = []
-all_forecast_rows = []
+# ARIMA Forecast Function
+def forecast_arima(ts, periods):
+    model = ARIMA(ts, order=(1, 1, 1))
+    model_fit = model.fit()
+    forecast_result = model_fit.get_forecast(steps=periods)
+    forecast_mean = forecast_result.predicted_mean
+    conf_int = forecast_result.conf_int()
+    future_dates = pd.date_range(ts.index[-1] + timedelta(days=1), periods=periods, freq="MS")
 
-def prepare_forecast(ts, server_name, db_name):
-    logging.info(f"Preparing forecast for Server: {server_name}, Database: {db_name}")
-    forecast_df = forecast_series(ts, (server_name, db_name))
-    plot_data.append((server_name, db_name, ts, forecast_df))
-    forecast_df["Server"] = server_name
-    forecast_df["Database"] = db_name
-    all_forecast_rows.append(forecast_df)
+    return pd.DataFrame({
+        "Date": future_dates,
+        "Forecast_GB": forecast_mean.values,
+        "Lower_Bound": conf_int.iloc[:, 0].values,
+        "Upper_Bound": conf_int.iloc[:, 1].values
+    })
 
-if st.button("Generate Forecast"):
-    logging.info("Generate Forecast button clicked.")
+# Trigger Forecast
+if st.button("🔮 Generate Forecast"):
     if selected_server == "All Servers" and selected_database == "All Databases":
-        agg_df = df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
-        prepare_forecast(agg_df, "All Servers", "All Databases")
+        ts = df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
+        title = "All Servers - All Databases"
     elif selected_server != "All Servers" and selected_database == "All Databases":
-        server_df = df[df["Server"] == selected_server]
-        monthly_total = server_df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
-        prepare_forecast(monthly_total, selected_server, "All Databases")
+        filtered = df[df["Server"] == selected_server]
+        ts = filtered.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
+        title = f"{selected_server} - All Databases"
     else:
-        db_df = df[(df["Server"] == selected_server) & (df["Database"] == selected_database)]
-        ts = db_df.resample("MS", on="Date")["DB_Size_GB"].last().asfreq("MS").fillna(method="ffill")
-        prepare_forecast(ts, selected_server, selected_database)
+        filtered = df[(df["Server"] == selected_server) & (df["Database"] == selected_database)]
+        ts = filtered.resample("MS", on="Date")["DB_Size_GB"].last().asfreq("MS").fillna(method="ffill")
+        title = f"{selected_server} - {selected_database}"
 
-    logging.info("Plotting forecast...")
+    forecast_df = forecast_arima(ts, months_to_forecast)
+
+    # Plotting
     fig, ax = plt.subplots(figsize=(12, 6))
-    colors = plt.cm.tab10.colors
+    ax.plot(ts.index, ts.values, label="Historical", color="blue")
+    ax.plot(forecast_df["Date"], forecast_df["Forecast_GB"], label="Forecast", color="red", linestyle="--")
+    ax.fill_between(forecast_df["Date"], forecast_df["Lower_Bound"], forecast_df["Upper_Bound"],
+                    color='red', alpha=0.2, label="Confidence Interval")
 
-    for idx, (server, db, ts, forecast_df) in enumerate(plot_data):
-        color = colors[idx % len(colors)]
-        if chart_type == "Line Chart":
-            ax.plot(ts.index, ts.values, label=f"{server} ({db}) - Historical", color="blue", linestyle="-")
-            ax.plot(forecast_df["Date"], forecast_df["Predicted_Size_GB"], label=f"{server} ({db}) - Forecast", color="red", linestyle="--", linewidth=2)
-        else:
-            ax.bar(ts.index, ts.values, label=f"{server} ({db}) - Historical", color="blue", alpha=0.6)
-            ax.bar(forecast_df["Date"], forecast_df["Predicted_Size_GB"], label=f"{server} ({db}) - Forecast", color="red", alpha=0.9, width=5)
+    # Capacity limit line
+    ax.axhline(y=capacity_limit, color='black', linestyle='--', label=f"Capacity Limit ({capacity_limit} GB)")
 
-    ax.set_title("Database Growth Forecast")
+    # Check if forecast exceeds capacity
+    if (forecast_df["Forecast_GB"] > capacity_limit).any():
+        st.warning("⚠️ Forecast exceeds the capacity limit. Consider scaling or optimizing storage.")
+
+    ax.set_title(f"Forecast: {title}")
     ax.set_xlabel("Date")
-    ax.set_ylabel("Database Size (GB)")
+    ax.set_ylabel("DB Size (GB)")
     ax.legend()
     plt.xticks(rotation=45)
     st.pyplot(fig)
-    logging.info("Plotting completed.")
 
-    if all_forecast_rows:
-        combined_forecast_df = pd.concat(all_forecast_rows)[["Server", "Database", "Date", "Predicted_Size_GB"]]
-        st.write("📅 **Complete Forecast Table**")
-        st.dataframe(combined_forecast_df.reset_index(drop=True))
-        logging.info("Forecast table displayed.")
+    # Forecast Table
+    st.subheader("📅 Forecast Table")
+    st.dataframe(forecast_df)
