@@ -12,8 +12,13 @@ st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 # -------------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
-    return df
+    try:
+        df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
+        return df
+    except FileNotFoundError:
+        st.error("CSV file not found! Make sure db_growth_data.csv is in the app folder.")
+        st.stop()  # Stop execution if file is missing
+
 
 df = load_data()
 
@@ -39,8 +44,14 @@ st.write(f"### Overall Total DB Size Across All Servers: **{overall_total:.2f} G
 # -------------------------------
 @st.cache_resource
 def load_models():
-    with open("arima_models.pkl", "rb") as f:
-        return pickle.load(f)
+    try:
+        with open("arima_models.pkl", "rb") as f:
+            models = pickle.load(f)
+    except FileNotFoundError:
+        st.warning("ARIMA models pickle file not found! Forecasting will fit new models on the fly.")
+        models = {}
+    return models  # <-- This was missing
+
 
 models = load_models()
 
