@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import timedelta
 from statsmodels.tsa.arima.model import ARIMA
+import pyodbc
 import logging
 
 # Logging
@@ -10,19 +11,48 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 
-# Load Data
+# -------------------------------
+# SQL Server: Load Data
+# -------------------------------
 @st.cache_data
-def load_data():
+def load_data_from_sql():
+    server = '172.17.35.52'
+    database = 'AdventureWorks2022'
+    username = 'mlops'
+    password = 'mlops2k25'
+
     try:
-        df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
+        conn = pyodbc.connect(
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
+            f"UID={username};"
+            f"PWD={password}"
+        )
+
+        query = """
+        SELECT
+            ServerName AS [Server],
+            DatabaseName AS [Database],
+            RecordDate AS [Date],
+            SizeMB
+        FROM dbo.database_info_tb
+        """
+        df = pd.read_sql(query, conn)
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['DB_Size_GB'] = df['SizeMB'] / 1024  # Convert MB to GB
+        conn.close()
         return df
-    except FileNotFoundError:
-        st.error("CSV file not found. Ensure 'db_growth_data.csv' is present.")
+    except Exception as e:
+        st.error(f"Error connecting to SQL Server: {e}")
         st.stop()
 
-df = load_data()
+# Load data
+df = load_data_from_sql()
 
-# Summary Section
+# -------------------------------
+# Current Usage Summary
+# -------------------------------
 st.title("📊 Current Database Usage Summary")
 
 latest = df.groupby('Server')['Date'].max().reset_index()
@@ -35,7 +65,9 @@ for _, row in server_sizes.iterrows():
 st.write(f"### Total Across All Servers: **{total_size:.2f} GB**")
 st.markdown("---")
 
-# Inputs
+# -------------------------------
+# User Inputs
+# -------------------------------
 st.title("📈 Forecast DB Growth with ARIMA")
 months_to_forecast = st.slider("Months to Forecast", min_value=1, max_value=36, value=12)
 chart_type = st.selectbox("Chart Type", ["Line Chart", "Bar Chart"])
@@ -51,7 +83,9 @@ selected_database = st.selectbox("Select Database", db_list)
 
 capacity_limit = st.slider("⚠️ Capacity Limit (GB)", min_value=10, max_value=1000, value=500)
 
+# -------------------------------
 # ARIMA Forecast Function
+# -------------------------------
 def forecast_arima(ts, periods):
     model = ARIMA(ts, order=(1, 1, 1))
     model_fit = model.fit()
@@ -67,7 +101,9 @@ def forecast_arima(ts, periods):
         "Upper_Bound": conf_int.iloc[:, 1].values
     })
 
+# -------------------------------
 # Trigger Forecast
+# -------------------------------
 if st.button("🔮 Generate Forecast"):
     if selected_server == "All Servers" and selected_database == "All Databases":
         ts = df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
