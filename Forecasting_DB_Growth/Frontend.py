@@ -4,6 +4,17 @@ import pickle
 import matplotlib.pyplot as plt
 from datetime import timedelta
 from statsmodels.tsa.arima.model import ARIMA
+import logging
+
+# -------------------------------
+# Logging setup
+# -------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("app_logs.log"), logging.StreamHandler()]
+)
+logging.info("Streamlit app started.")
 
 st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 
@@ -12,19 +23,22 @@ st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 # -------------------------------
 @st.cache_data
 def load_data():
+    logging.info("Loading CSV data...")
     try:
         df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
+        logging.info(f"Data loaded successfully. Shape: {df.shape}")
         return df
     except FileNotFoundError:
+        logging.error("CSV file not found!")
         st.error("CSV file not found! Make sure db_growth_data.csv is in the app folder.")
         st.stop()  # Stop execution if file is missing
-
 
 df = load_data()
 
 # -------------------------------
 # Current DB Usage Summary
 # -------------------------------
+logging.info("Calculating current DB usage summary...")
 st.title("📊 Current Database Usage Summary")
 
 latest_dates = df.groupby('Server')['Date'].max().reset_index()
@@ -32,8 +46,12 @@ latest_per_server = pd.merge(df, latest_dates, on=['Server', 'Date'], how='inner
 total_usage_per_server = latest_per_server.groupby('Server')['DB_Size_GB'].sum().reset_index()
 overall_total = total_usage_per_server['DB_Size_GB'].sum()
 
+logging.info(f"Overall total DB size: {overall_total:.2f} GB")
+
 for _, row in total_usage_per_server.iterrows():
     server_date = latest_dates[latest_dates['Server'] == row['Server']]['Date'].values[0]
+    log_msg = f"Server: {row['Server']} (as of {pd.to_datetime(server_date).date()}) — Total DB Size: {row['DB_Size_GB']:.2f} GB"
+    logging.info(log_msg)
     st.write(f"Server: **{row['Server']}** (as of {pd.to_datetime(server_date).date()}) — Total DB Size: **{row['DB_Size_GB']:.2f} GB**")
 
 st.write("---")
@@ -44,14 +62,15 @@ st.write(f"### Overall Total DB Size Across All Servers: **{overall_total:.2f} G
 # -------------------------------
 @st.cache_resource
 def load_models():
+    logging.info("Loading ARIMA models from pickle...")
     try:
         with open("arima_models.pkl", "rb") as f:
             models = pickle.load(f)
+        logging.info(f"Loaded {len(models)} models.")
     except FileNotFoundError:
-        st.warning("ARIMA models pickle file not found! Forecasting will fit new models on the fly.")
+        logging.warning("ARIMA models pickle file not found! Will fit new models on the fly.")
         models = {}
-    return models  # <-- This was missing
-
+    return models
 
 models = load_models()
 
@@ -76,12 +95,16 @@ selected_database = st.selectbox("Select Database", db_options)
 # Forecast function
 # -------------------------------
 def forecast_series(ts, model_key):
+    logging.info(f"Forecasting for key: {model_key} ...")
     if model_key in models:
+        logging.info("Using pre-trained ARIMA model.")
         model_fit = models[model_key]
     else:
+        logging.info("Fitting new ARIMA model.")
         model_fit = ARIMA(ts, order=(1, 1, 1)).fit()
     forecast = model_fit.forecast(steps=months_to_forecast)
     forecast_dates = pd.date_range(ts.index[-1] + timedelta(days=1), periods=months_to_forecast, freq="MS")
+    logging.info(f"Forecast completed. Forecast length: {len(forecast)}")
     return pd.DataFrame({"Date": forecast_dates, "Predicted_Size_GB": forecast.values})
 
 # -------------------------------
@@ -91,6 +114,7 @@ plot_data = []
 all_forecast_rows = []
 
 def prepare_forecast(ts, server_name, db_name):
+    logging.info(f"Preparing forecast for Server: {server_name}, Database: {db_name}")
     forecast_df = forecast_series(ts, (server_name, db_name))
     plot_data.append((server_name, db_name, ts, forecast_df))
     forecast_df["Server"] = server_name
@@ -98,6 +122,7 @@ def prepare_forecast(ts, server_name, db_name):
     all_forecast_rows.append(forecast_df)
 
 if st.button("Generate Forecast"):
+    logging.info("Generate Forecast button clicked.")
     if selected_server == "All Servers" and selected_database == "All Databases":
         agg_df = df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
         prepare_forecast(agg_df, "All Servers", "All Databases")
@@ -110,9 +135,7 @@ if st.button("Generate Forecast"):
         ts = db_df.resample("MS", on="Date")["DB_Size_GB"].last().asfreq("MS").fillna(method="ffill")
         prepare_forecast(ts, selected_server, selected_database)
 
-    # -------------------------------
-    # Plotting
-    # -------------------------------
+    logging.info("Plotting forecast...")
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = plt.cm.tab10.colors
 
@@ -131,8 +154,10 @@ if st.button("Generate Forecast"):
     ax.legend()
     plt.xticks(rotation=45)
     st.pyplot(fig)
+    logging.info("Plotting completed.")
 
     if all_forecast_rows:
         combined_forecast_df = pd.concat(all_forecast_rows)[["Server", "Database", "Date", "Predicted_Size_GB"]]
         st.write("📅 **Complete Forecast Table**")
         st.dataframe(combined_forecast_df.reset_index(drop=True))
+        logging.info("Forecast table displayed.")
