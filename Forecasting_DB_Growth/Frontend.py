@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import timedelta
 from statsmodels.tsa.arima.model import ARIMA
-import pyodbc
 import logging
 
 # Logging
@@ -12,46 +11,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 
 # -------------------------------
-# SQL Server: Load Data
+# Upload CSV File
 # -------------------------------
-@st.cache_data
-def load_data_from_sql():
-    server = '172.17.35.52'
-    database = 'AdventureWorks2022'
-    username = 'mlops'
-    password = 'mlops2k25'
+st.title("Upload DB Growth Data")
+uploaded_file = st.file_uploader("Choose CSV file", type="csv")
 
-    try:
-        conn = pyodbc.connect(
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            f"UID={username};"
-            f"PWD={password}"
-        )
-
-        query = """
-        SELECT
-            ServerName AS [Server],
-            DatabaseName AS [Database],
-            RecordDate AS [Date],
-            SizeMB
-        FROM dbo.database_info_tb
-        """
-        df = pd.read_sql(query, conn)
-        df['Date'] = pd.to_datetime(df['Date'])
-        df['DB_Size_GB'] = df['SizeMB'] / 1024  # Convert MB to GB
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"Error connecting to SQL Server: {e}")
-        st.stop()
-
-# Load data
-df = load_data_from_sql()
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, parse_dates=["Date"])
+else:
+    st.warning("Please upload the CSV file to proceed.")
+    st.stop()
 
 # -------------------------------
-# Current Usage Summary
+# Summary Section
 # -------------------------------
 st.title("📊 Current Database Usage Summary")
 
@@ -62,11 +34,12 @@ total_size = server_sizes['DB_Size_GB'].sum()
 
 for _, row in server_sizes.iterrows():
     st.write(f"Server: **{row['Server']}** — Total DB Size: **{row['DB_Size_GB']:.2f} GB**")
+
 st.write(f"### Total Across All Servers: **{total_size:.2f} GB**")
 st.markdown("---")
 
 # -------------------------------
-# User Inputs
+# Inputs
 # -------------------------------
 st.title("📈 Forecast DB Growth with ARIMA")
 months_to_forecast = st.slider("Months to Forecast", min_value=1, max_value=36, value=12)
@@ -79,8 +52,8 @@ if selected_server != "All Servers":
     db_list = ["All Databases"] + sorted(df[df["Server"] == selected_server]["Database"].unique())
 else:
     db_list = ["All Databases"]
-selected_database = st.selectbox("Select Database", db_list)
 
+selected_database = st.selectbox("Select Database", db_list)
 capacity_limit = st.slider("⚠️ Capacity Limit (GB)", min_value=10, max_value=1000, value=500)
 
 # -------------------------------
@@ -93,7 +66,6 @@ def forecast_arima(ts, periods):
     forecast_mean = forecast_result.predicted_mean
     conf_int = forecast_result.conf_int()
     future_dates = pd.date_range(ts.index[-1] + timedelta(days=1), periods=periods, freq="MS")
-
     return pd.DataFrame({
         "Date": future_dates,
         "Forecast_GB": forecast_mean.values,
@@ -105,6 +77,7 @@ def forecast_arima(ts, periods):
 # Trigger Forecast
 # -------------------------------
 if st.button("🔮 Generate Forecast"):
+
     if selected_server == "All Servers" and selected_database == "All Databases":
         ts = df.resample("MS", on="Date")["DB_Size_GB"].sum().asfreq("MS").fillna(method="ffill")
         title = "All Servers - All Databases"
@@ -117,12 +90,15 @@ if st.button("🔮 Generate Forecast"):
         ts = filtered.resample("MS", on="Date")["DB_Size_GB"].last().asfreq("MS").fillna(method="ffill")
         title = f"{selected_server} - {selected_database}"
 
+    # Generate forecast
     forecast_df = forecast_arima(ts, months_to_forecast)
 
+    # -------------------------------
     # Plotting
+    # -------------------------------
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(ts.index, ts.values, label="Historical", color="blue")
-    ax.plot(forecast_df["Date"], forecast_df["Forecast_GB"], label="Forecast", color="red", linestyle="--")
+    ax.plot(ts.index, ts.values, label="Historical", color="blue", linewidth=2)
+    ax.plot(forecast_df["Date"], forecast_df["Forecast_GB"], label="Forecast", color="red", linestyle="--", linewidth=2)
     ax.fill_between(forecast_df["Date"], forecast_df["Lower_Bound"], forecast_df["Upper_Bound"],
                     color='red', alpha=0.2, label="Confidence Interval")
 
@@ -138,8 +114,11 @@ if st.button("🔮 Generate Forecast"):
     ax.set_ylabel("DB Size (GB)")
     ax.legend()
     plt.xticks(rotation=45)
+
     st.pyplot(fig)
 
+    # -------------------------------
     # Forecast Table
+    # -------------------------------
     st.subheader("📅 Forecast Table")
     st.dataframe(forecast_df)
