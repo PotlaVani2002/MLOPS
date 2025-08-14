@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd 
 import matplotlib.pyplot as plt 
 from datetime import timedelta 
-from statsmodels.tsa.arima.model 
-import ARIMA 
+from statsmodels.tsa.arima.model import ARIMA 
 import logging 
 # Logging 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s") 
