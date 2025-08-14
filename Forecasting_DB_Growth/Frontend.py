@@ -11,18 +11,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 st.set_page_config(page_title="DB Growth Forecast", layout="wide")
 
 # -------------------------------
-# Load Data
+# Upload CSV File
 # -------------------------------
-@st.cache_data
-def load_data():
-    try:
-        df = pd.read_csv("db_growth_data.csv", parse_dates=["Date"])
-        return df
-    except FileNotFoundError:
-        st.error("CSV file not found. Ensure 'db_growth_data.csv' is present.")
-        st.stop()
+st.title("Upload DB Growth Data")
+uploaded_file = st.file_uploader("Choose CSV file", type="csv")
 
-df = load_data()
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, parse_dates=["Date"])
+else:
+    st.warning("Please upload the CSV file to proceed.")
+    st.stop()
 
 # -------------------------------
 # Summary Section
@@ -56,7 +54,6 @@ else:
     db_list = ["All Databases"]
 
 selected_database = st.selectbox("Select Database", db_list)
-
 capacity_limit = st.slider("⚠️ Capacity Limit (GB)", min_value=10, max_value=1000, value=500)
 
 # -------------------------------
