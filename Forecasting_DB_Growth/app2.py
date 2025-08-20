@@ -24,36 +24,16 @@ def load_growth_percentage():
     )
     conn = pyodbc.connect(conn_str)
 
-    query = """
-    SELECT b.servername,
-           b.databasename,
-           b.used,
-           b.yr,
-           b.mn,
-           ((b.used * 1.0) / 100000) * 100 AS per
-    FROM (
-        SELECT a.SERVERNAME,
-               a.databasename,
-               SUM(a.used) AS used,
-               a.yr,
-               a.mn
-        FROM (
-            SELECT servername,
-                   databasename,
-                   YEAR(recorddate) AS yr,
-                   MONTH(recorddate) AS mn,
-                   SUM(growthmb) AS used
-            FROM database_info_tb
-            GROUP BY servername,
-                     databasename,
-                     YEAR(recorddate),
-                     MONTH(recorddate)
-        ) a
-        GROUP BY a.SERVERNAME, a.databasename, a.yr, a.mn
-    ) b
-    WHERE b.yr >= 2015
-    GROUP BY b.servername, b.databasename, b.used, b.yr, b.mn
-    ORDER BY b.servername, b.yr, b.mn
+    query = """  select b.servername,b.databasename,b.used, b.yr,b.mn,((b.used*1.0)/70000)* 100 as per from
+    (SELECT a.SERVERNAME,a.databasename, SUM(a.used)as used, a.yr,a.mn from  
+  (  select servername,databasename,year(recorddate)as yr  ,month(recorddate) as mn, sum(growthmb) as used
+  from db_info_tb
+  group by servername,databasename,year(recorddate)  ,month(recorddate))a
+  group by a.SERVERNAME,a.databasename, a.yr,a.mn)b
+  group by b.servername,b.databasename,b.used, b.yr,b.mn
+  order by b.servername,b.databasename, b.yr,b.mn
+  ;
+
     """
     df = pd.read_sql(query, conn)
     conn.close()
@@ -64,7 +44,7 @@ def load_growth_percentage():
 # ---------------------------
 # ARIMA Model Selection
 # ---------------------------
-def select_best_arima(train, p_range=(0, 3), d_range=(0, 2), q_range=(0, 3)):
+def select_best_arima(train, p_range=(0, 6), d_range=(0, 2), q_range=(0, 6)):
     best_aic = float("inf")
     best_order = None
     best_model = None
@@ -81,6 +61,41 @@ def select_best_arima(train, p_range=(0, 3), d_range=(0, 2), q_range=(0, 3)):
                 except:
                     continue
     return best_order, best_model
+
+# ---------------------------
+# SARIMA Model Selection
+# ---------------------------
+def select_best_sarima(train, 
+                       p_range=(0, 2), d_range=(0, 1), q_range=(0, 2),
+                       P_range=(0, 2), D_range=(0, 1), Q_range=(0, 2), s=12):
+    best_aic = float("inf")
+    best_order = None
+    best_seasonal_order = None
+    best_model = None
+
+    for p in range(p_range[0], p_range[1] + 1):
+        for d in range(d_range[0], d_range[1] + 1):
+            for q in range(q_range[0], q_range[1] + 1):
+                for P in range(P_range[0], P_range[1] + 1):
+                    for D in range(D_range[0], D_range[1] + 1):
+                        for Q in range(Q_range[0], Q_range[1] + 1):
+                            try:
+                                model = SARIMAX(
+                                    train,
+                                    order=(p, d, q),
+                                    seasonal_order=(P, D, Q, s),
+                                    enforce_stationarity=False,
+                                    enforce_invertibility=False
+                                )
+                                results = model.fit(disp=False)
+                                if results.aic < best_aic:
+                                    best_aic = results.aic
+                                    best_order = (p, d, q)
+                                    best_seasonal_order = (P, D, Q, s)
+                                    best_model = results
+                            except:
+                                continue
+    return best_order, best_seasonal_order, best_model
 
 # ---------------------------
 # Streamlit UI
@@ -134,10 +149,12 @@ def forecast_group(group, server_name, db_name):
             pred = model_fit.forecast(steps=len(test))
             final_fit = ARIMA(ts, order=best_order).fit()
         else:
-            best_order = (1, 1, 1, 12)
-            model_fit = SARIMAX(train, order=(1, 1, 1), seasonal_order=best_order).fit()
+            best_order, best_seasonal_order, model_fit = select_best_sarima(train)
+            if best_order is None or best_seasonal_order is None:
+                raise ValueError("No valid SARIMA model found.")
             pred = model_fit.forecast(steps=len(test))
-            final_fit = SARIMAX(ts, order=(1, 1, 1), seasonal_order=best_order).fit()
+            final_fit = SARIMAX(ts, order=best_order, seasonal_order=best_seasonal_order).fit()
+
         
         # metrics
         y_true, y_pred = np.asarray(test, dtype=float), np.asarray(pred, dtype=float)
@@ -196,7 +213,15 @@ if not plot_data.empty:
     plot_data["used_display"] = plot_data["used"].apply(lambda x: f"{x:,.2f} MB" if x < 1024 else f"{x/1024:,.2f} GB")
     
     plot_data["Label"] = plot_data["servername"] + " | " + plot_data["databasename"]
-    server_capacity = 10  # example capacity
+
+# ---------------------------
+# Dynamic Capacity Selection
+    # ---------------------------
+    if selected_server == "All Servers" and selected_db == "All Databases":
+        server_capacity = 4   # overall server capacity
+    else:
+        server_capacity = 2    # per-database capacity (percentage)
+
     
     if chart_type == "Line Chart":
         fig = px.line(
@@ -236,20 +261,39 @@ if not plot_data.empty:
     
     fig.add_hline(y=0, line_color="black")
     fig.add_vline(x=plot_data["Date"].min(), line_color="black")
-    fig.add_hline(
-        y=server_capacity,
-        line_dash="dot",
-        line_color="red",
-        annotation_text="Server Capacity",
-        annotation_position="top left"
+    fig.add_trace(
+        px.line(
+            x=[plot_data["Date"].min(), plot_data["Date"].max()],
+            y=[server_capacity, server_capacity],
+        ).data[0]
     )
-    
+
+    # style it like the other traces
+    fig.data[-1].update(
+        name="DB Limit",
+        mode="lines",
+        line=dict(color="red", dash="dot", width=2),
+        showlegend=True
+    )
     min_date = plot_data["Date"].min()
     max_date = plot_data["Date"].max()
     total_days = (max_date - min_date).days
     pad = pd.Timedelta(days=int(total_days * 0.05))
     fig.update_xaxes(range=[min_date - pad, max_date + pad])
-    fig.update_layout(xaxis_title="Month", yaxis_title="Growth Percentage (%)", hovermode="x unified")
+    # ---------------------------
+    # Dynamic Y-axis Tick Interval
+    # ---------------------------
+    if selected_server == "All Servers" and selected_db == "All Databases":
+        y_tick_interval = 0.5
+    else:
+        y_tick_interval = 0.5
+
+    fig.update_layout(
+        xaxis_title="Month",
+        yaxis_title="Growth Percentage (%)",
+        hovermode="x unified",
+        yaxis=dict(dtick=y_tick_interval)  # 👈 set y-axis difference
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
